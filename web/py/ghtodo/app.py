@@ -174,8 +174,11 @@ class App:
 
     def column_html(self, lst) -> str:
         counter, bar = self.stats(lst)
-        return (f'<section class="col" data-list="{lst["id"]}"><header><a href="#" hx-get="/view/open/{lst["id"]}" hx-target="#app">'
-                f'{title(lst["name"])}</a><span class="prog">{counter}</span>{bar}</header>'
+        hid = "" if lst["id"] == "_conflicts" else (
+            f'<span class="hacts"><button class="ib ren" data-rename="{lst["id"]}" aria-label="Rename list">{ic("pen")}</button>'
+            f'<button class="ib" hx-post="/list/{lst["id"]}/hide" hx-target="#app" aria-label="Hide list">{ic("eye-slash")}</button></span>')
+        return (f'<section class="col" data-list="{lst["id"]}"><header data-name="{E(lst["name"], quote=True)}"><a href="#" hx-get="/view/open/{lst["id"]}" hx-target="#app">'
+                f'{title(lst["name"])}</a><span class="prog">{counter}</span>{hid}{bar}</header>'
                 f'<div class="board" data-list="{lst["id"]}">{self.items_html(lst) or EMPTY}</div>'
                 f'{self._add_form(lst["id"])}{self.hidden_html(lst)}</section>')
 
@@ -270,10 +273,11 @@ class App:
         checked = "checked" if it["done"] else ""
         classes = f'item c-{it["color"] or "none"}' + (" done" if it["done"] else "") + (" locked" if locked else "")
         return (f'<li class="{classes}" id="i-{it["id"]}" data-id="{it["id"]}" draggable="true" '
-                f'hx-get="/item/{it["id"]}/tools" hx-trigger="mouseenter once, focusin once" hx-target="find .tools" hx-swap="innerHTML">'
+                f'hx-get="/item/{it["id"]}/tools" hx-trigger="mouseenter once, focusin once, touchstart once" hx-target="find .tools" hx-swap="innerHTML">'
                 f'<div class="row">'
                 f'<input type="checkbox" {checked} hx-post="/item/{it["id"]}/toggle" hx-target="#main">'
-                f'<strong class="name" {name_attrs}>{md.renderInline(name) or "(empty)"}</strong>{self.stubs_html(it["id"])}{prog}</div>'
+                f'<strong class="name" {name_attrs}>{md.renderInline(name) or "(empty)"}</strong>{self.stubs_html(it["id"])}{prog}'
+                f'<button class="more-btn" aria-label="Actions" title="Actions">{ic("ellipsis")}</button></div>'
                 f'<div class="tools"></div>{body}{conflict}</li>')
 
     # ---- handlers ----------------------------------------------------

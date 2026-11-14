@@ -315,3 +315,57 @@ a.btn:hover { background: var(--btn-hi); border-color: #a9b8d4; } a.btn .ext { f
 li.item:hover > .tools, li.item:focus-within > .tools { display: none; }
 li.item .row:hover + .tools, li.item > .tools:hover, li.item > .tools:focus-within { display: flex; }
 li.item.editing > .tools, li.item.dragging > .tools { display: none !important; }
+
+/* ---- the page never scrolls: every list (and the sidebar) scrolls on its own ---- */
+html, body { height: 100%; }
+body { overflow: hidden; display: flex; flex-direction: column; }
+#bar { flex: none; }
+#app { flex: 1; min-height: 0; height: auto; overflow: hidden; grid-template-rows: minmax(0, 1fr); }
+aside { min-height: 0; overflow-y: auto; }
+main#main { min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 1rem; }
+.cols { height: auto; flex: 1; min-height: 0; padding-bottom: .25rem; overflow-y: hidden; }
+.col > .board, .board { padding-bottom: .25rem; }
+#main > .detail { flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%; }
+.detail > .board { flex: 1 1 auto; min-height: 0; overflow-y: auto; } .detail > header, .detail > form.add, .detail > .hiddenbox { flex: none; }
+.col > .hiddenbox { flex: none; }
+/* room under the last card so its toolbar (which hangs below the title row) is never clipped by the board or hidden by the add box */
+.col > .board, .detail > .board { padding-bottom: 2.4rem; }
+
+/* ================= phone ================= */
+.more-btn, .hacts { display: none; }
+@media (max-width: 700px), (hover: none) {
+  .more-btn { display: inline-flex; margin-left: auto; width: 2rem; height: 2rem; padding: 0; border-color: transparent; background: transparent; color: #55627a; flex: none; align-self: center; }
+  li.item.tools-open > .tools { display: flex !important; }
+  .row .prog { margin-left: auto; } .row .prog + .more-btn { margin-left: .2rem; }
+  input[type=checkbox] { width: 1.2rem; height: 1.2rem; }
+}
+@media (max-width: 700px) {
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  #bar { padding: 0 .75rem; gap: .5rem; } #state { display: none; }
+  #app { display: flex; flex-direction: column; height: auto; flex: 1; min-height: 0; overflow: hidden; }
+  /* sidebar -> chip bar */
+  aside { width: auto; flex: none; flex-direction: row; align-items: center; gap: .5rem; padding: .5rem .75rem; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid #e4eaf5; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  aside::-webkit-scrollbar { display: none; }
+  aside ul { flex-direction: row; gap: .4rem; flex: none; align-items: center; }
+  aside li { flex: none; height: 2.3rem; padding: 0 .85rem; border-radius: 999px; background: #fff; border: 1px solid #d5dcea; box-shadow: none; }
+  aside li.all, aside li input.pick, aside li .acts, aside li:hover .acts, aside li .prog { display: none !important; }
+  aside li a { padding: 0; font-size: .9rem; max-width: 11rem; } aside li a i.fa-solid { display: none; }
+  aside li.on, aside li.here { background: var(--accent); border-color: var(--accent-d); box-shadow: none; } aside li.here a, aside li.on a { color: #1f3a66; font-weight: 600; }
+  aside li.more, aside li.off { padding: 0 .75rem; }
+  aside form.newlist { flex: none; } aside form.newlist input { width: 7.5rem; height: 2.3rem; border-radius: 999px; } aside form.newlist button.plus { height: 2.3rem; width: 2.3rem; border-radius: 999px; }
+  #sync { display: none; }
+  /* one list per screen, swipe between them */
+  main#main { padding: .5rem 0 0; overflow: hidden; }
+  .cols { display: flex; flex: 1; min-height: 0; gap: 0; padding: 0; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .cols::-webkit-scrollbar { display: none; }
+  .col { flex: 0 0 100%; width: 100%; max-height: 100%; padding: 0 .75rem; scroll-snap-align: start; scroll-snap-stop: always; }
+  .cols svg.strings { display: none; }
+  .col > header { align-items: center; gap: .5rem; } .col > header a { font-size: 1.05rem; flex: 1; }
+  .hacts { display: inline-flex; gap: .1rem; } .hacts button.ib { width: 2.2rem; height: 2.2rem; }
+  .col > .board { padding-bottom: 3rem; }
+  li.item .row { padding: .55rem .6rem; } .tools button, .tools .sw { min-width: 2.2rem; height: 2.2rem; } .tools .sw { width: 1.6rem; min-width: 1.6rem; height: 1.6rem; }
+  ul.check li { padding: .2rem 0; }
+  #main > .detail { padding: 0 .75rem; } header.pagehead { gap: .5rem; flex-wrap: wrap; } header.pagehead nav { margin-left: 0; }
+  form.add textarea { font-size: 16px; } input, textarea { font-size: 16px; }                          /* no zoom-on-focus on iOS */
+  dialog.dlg { width: calc(100vw - 1.5rem); }
+}

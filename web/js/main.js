@@ -197,7 +197,7 @@ document.addEventListener("click", (e) => {
 
 // ---- rename a list in place: pencil in the sidebar, double-click on the list title ----------------------------------
 function renameList(el) {
-  const lid = el.dataset.rename, host = el.closest("li") || el; if (!lid || host.querySelector("input.rename")) return;
+  const lid = el.dataset.rename, host = el.closest("li, header") || el; if (!lid || host.querySelector("input.rename")) return;
   const label = host.querySelector("a") || el, inp = document.createElement("input");
   inp.className = "rename"; inp.value = host.dataset.name || el.dataset.name || label.textContent.trim(); inp.maxLength = 80;
   let over = false;
@@ -308,3 +308,35 @@ async function loadShell() { htmx.swap($("app"), await call("handle", "GET", "/"
   } catch (err) {
     clearTimeout(slow); console.error(err); bootFailed(err); }
 })();
+
+// ---- phone layout: one list per screen, swipe sideways (native scroll-snap), the sidebar becomes a chip bar on top ------
+const phone = matchMedia("(max-width: 700px)");
+let curList = null;                                                       // list currently on screen (phone)
+const colsEl = () => document.querySelector("#main > .cols");
+function goToList(id, smooth = true) {
+  const c = colsEl()?.querySelector(`.col[data-list="${id}"]`); if (!c) return false;
+  colsEl().scrollTo({ left: c.offsetLeft - colsEl().offsetLeft, behavior: smooth ? "smooth" : "instant" }); return true;
+}
+function markChips() {                                                    // highlight the chip of the list on screen
+  if (!phone.matches) return;
+  const cols = colsEl(); if (!cols) return;
+  const w = cols.clientWidth || 1, idx = Math.round(cols.scrollLeft / w), col = cols.querySelectorAll(".col")[idx]; if (!col) return;
+  curList = col.dataset.list;
+  document.querySelectorAll("aside li[data-droplist]").forEach((li) => li.classList.toggle("here", li.dataset.droplist === curList));
+  document.querySelector(`aside li[data-droplist="${curList}"]`)?.scrollIntoView({ inline: "center", block: "nearest" });
+}
+document.addEventListener("scroll", (e) => { if (e.target.matches?.(".cols")) markChips(); }, true);
+document.body.addEventListener("htmx:afterSettle", () => { if (phone.matches && colsEl()) { if (curList) goToList(curList, false); markChips(); } });
+document.addEventListener("click", async (e) => {                         // chip tap = go to that list, no request
+  if (!phone.matches) return;
+  const a = e.target.closest?.("aside li[data-droplist] > a"); if (!a) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const id = a.parentElement.dataset.droplist;
+  if (!goToList(id)) { htmx.swap($("app"), await call("handle", "GET", "/view/all", "{}"), { swapStyle: "innerHTML" }); curList = id; goToList(id, false); markChips(); }
+}, true);
+// the item toolbar needs a hover; on touch the ⋯ button opens it
+document.addEventListener("click", (e) => {
+  const more = e.target.closest?.(".more-btn"), li = more?.closest("li.item");
+  document.querySelectorAll("li.item.tools-open").forEach((x) => { if (x !== li) x.classList.remove("tools-open"); });
+  if (li) { e.stopPropagation(); li.classList.toggle("tools-open"); }
+});
