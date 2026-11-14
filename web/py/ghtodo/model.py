@@ -2,7 +2,7 @@
 
 Repo layout (one file per list, so unrelated edits never touch the same blob):
 
-    ghtodo.json            {"v":1,"order":[list ids]}
+    todoing.json           {"v":1,"order":[list ids]}
     lists/<id>.log         append-only log, one zlib+base64 delta per line (see logfmt.py)
 
 Items are a flat record set (parent + fractional `pos`), not a nested JSON
@@ -291,7 +291,7 @@ class Workspace:
         synced) each changed list gets exactly one line APPENDED to its log."""
         from . import logfmt
         base_files = base_files or {}
-        files = {"ghtodo.json": json.dumps({"v": SCHEMA, "order": self.order}, indent=1) + "\n"}
+        files = {"todoing.json": json.dumps({"v": SCHEMA, "order": self.order}, indent=1) + "\n"}
         t = now()
         for lid, lst in self.lists.items():
             path = f"lists/{lid}.log"
@@ -303,7 +303,7 @@ class Workspace:
     def from_files(cls, files: dict[str, str]) -> "Workspace":
         from . import logfmt
         ws = cls()
-        meta = json.loads(files.get("ghtodo.json", '{"order":[]}'))
+        meta = json.loads(files.get("todoing.json") or files.get("ghtodo.json") or '{"order":[]}')     # old name still readable
         ws.order = meta.get("order", [])
         for path, text in files.items():
             if path.startswith("lists/") and path.endswith(".log"):

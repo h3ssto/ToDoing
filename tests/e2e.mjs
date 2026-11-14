@@ -16,16 +16,16 @@ const connect = async (p) => { await p.click("#btn-login"); await p.fill("#pat",
   await p.waitForFunction(() => /synced|up to date/.test(document.getElementById("state").textContent), null, { timeout: 30000 }); return p.textContent("#state"); };
 const A = await device("A");
 console.log("A connect:", await connect(A));
-await A.fill("aside input[name=name]", "Shared"); await A.press("aside input[name=name]", "Enter"); await A.waitForSelector("#board", { state: "attached" });
-await A.fill("form.add textarea", "Buy milk\n* [ ] oat\n* [ ] soy"); await A.click("form.add button"); await A.waitForSelector("li.item");
+await A.fill("aside input[name=name]", "Shared"); await A.press("aside input[name=name]", "Enter"); await A.waitForSelector(".col");
+await A.fill("form.add textarea", "Buy milk\n* [ ] oat\n* [ ] soy"); await A.click("form.add button.plus"); await A.waitForSelector("li.item");
 await A.click("#btn-sync"); await A.waitForFunction(() => /synced/.test(document.getElementById("state").textContent));
 console.log("A after edit+sync:", await A.textContent("#state"));
 const B = await device("B");                         // second "device": fresh profile
 console.log("B connect:", await connect(B));
-await B.waitForSelector("aside li a"); await B.click("aside li a"); await B.waitForSelector("li.item .name");
+await B.waitForSelector("aside li[data-droplist] a"); await B.click("aside li[data-droplist] a"); await B.waitForSelector("li.item .name");
 console.log("B sees item:", await B.textContent("li.item .name"));
 // conflicting edits: both edit the same item offline-ish, then sync
-const edit = async (p, text) => { await p.click("li.item .name"); await p.fill("li.item textarea", text); await p.click("li.item form button:not([type=button])"); await p.waitForSelector("li.item .name"); };
+const edit = async (p, text) => { await p.click("li.item .name", { position: { x: 4, y: 4 } }); await p.fill(".editor textarea", text); await p.click(".editor button.pri"); await p.waitForSelector("li.item .name"); };
 await edit(A, "Buy milk\nA-WAS-HERE"); await edit(B, "Buy milk\nB-WAS-HERE");
 await A.click("#btn-sync"); await A.waitForFunction(() => /synced/.test(document.getElementById("state").textContent));
 await B.click("#btn-sync"); await B.waitForFunction(() => /conflict/.test(document.getElementById("state").textContent), null, { timeout: 20000 });

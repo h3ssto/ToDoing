@@ -226,7 +226,8 @@ class App:
         colors = "".join(f'<button class="sw c-{c or "none"}" title="{c or "none"}" hx-post="/item/{iid}/color" '
                          f'hx-vals=\'{{"color":"{c}"}}\' hx-target="#main"></button>' for c in COLORS)
         add = "" if self.ws.locked(lst, it) else f'<button hx-get="/item/{iid}/addsub" hx-target="closest li" hx-swap="beforeend" title="add sub-item">{ic("plus")}</button>'
-        return (f'{add}<button class="link" data-link="{iid}" title="connect">{ic("link")}</button>{colors}'
+        edit = "" if self.ws.locked(lst, it) else f'<button hx-get="/item/{iid}/edit" hx-target="closest li" hx-swap="outerHTML" title="edit" aria-label="Edit">{ic("pen")}</button>'
+        return (f'{edit}{add}<button class="link" data-link="{iid}" title="connect">{ic("link")}</button>{colors}'
                 f'<button hx-post="/item/{iid}/hide" hx-target="#main" title="hide" aria-label="Hide">{ic("eye-slash")}</button>')
 
     def body_html(self, text: str, item_id: str | None = None, locked: bool = False) -> str:
@@ -264,7 +265,7 @@ class App:
                 keep = f'<button hx-post="/conflict/{it["id"]}/keep" hx-target="#app">keep this</button> '
             conflict = (f'<div class="conf">{E(cf["side"])} · {E(cf["field"])} {E(cf.get("note", ""))} {keep}'
                         f'<button hx-delete="/item/{it["id"]}" hx-target="#main">discard</button></div>')
-        name_attrs = "" if locked else (f'hx-get="/item/{it["id"]}/edit" hx-trigger="click[!event.target.closest(\'a\')]" '
+        name_attrs = "" if locked else (f'hx-get="/item/{it["id"]}/edit" hx-trigger="click" '
                                         'hx-target="closest li" hx-swap="outerHTML"')
         checked = "checked" if it["done"] else ""
         classes = f'item c-{it["color"] or "none"}' + (" done" if it["done"] else "") + (" locked" if locked else "")

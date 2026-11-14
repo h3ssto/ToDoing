@@ -308,3 +308,10 @@ a.btn:hover { background: var(--btn-hi); border-color: #a9b8d4; } a.btn .ext { f
 #join-who { font-size: 1rem; text-align: center; padding: .4rem 0 .6rem; } #join-who.bad { color: #b4443f; } #join-who i { color: var(--accent-d); margin-right: .35rem; }
 #bar button { white-space: nowrap; flex: none; } #state { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 640px) { #bar button { font-size: 0; gap: 0; } #bar button i { font-size: .95rem; } #bar #btn-reload { font-size: .8rem; } }
+
+/* toolbar: right under the title line, overlaying the card body (static position = directly after the row) */
+.tools { top: auto; bottom: auto; right: .4rem; margin-top: -.15rem; }
+/* visible only while the pointer is on the title row or the toolbar itself, so it never blocks the sub-items underneath */
+li.item:hover > .tools, li.item:focus-within > .tools { display: none; }
+li.item .row:hover + .tools, li.item > .tools:hover, li.item > .tools:focus-within { display: flex; }
+li.item.editing > .tools, li.item.dragging > .tools { display: none !important; }

@@ -16,7 +16,7 @@ async def http(method, url, body):
     h = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     if S["token"]:
         h["Authorization"] = f"Bearer {S['token']}"
-    kw = {"method": method, "headers": h}
+    kw = {"method": method, "headers": h, "cache": "no-store"}      # the browser must never answer GET ref from its HTTP cache
     if body is not None:
         kw["body"] = json.dumps(body)
     r = await pyfetch(url, **kw)

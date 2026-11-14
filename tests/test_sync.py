@@ -78,3 +78,42 @@ def test_auth_failure_message():
     async def deny(m, u, b): return 401, {"message": "Bad credentials"}
     try: asyncio.run(sync(deny, App(), {"repo": "u/r", "branch": "main", "commit": None, "files": {}}))
     except Exception as e: assert "sign in again" in str(e) or "initialise" in str(e), e
+
+
+class StaleGH(FakeGH):
+    """Reads of the ref keep answering with the PREVIOUS head for a few calls after a push (HTTP cache / replica lag)."""
+    def __init__(s, stale_reads=2):
+        super().__init__(); s.prev, s.stale, s.left = s.head, stale_reads, 0
+    async def __call__(s, m, url, body):
+        u = url.split("/git/")[-1]
+        if u.startswith("ref/") and s.left > 0:
+            s.left -= 1; return 200, {"object": {"sha": s.prev}}
+        before = s.head
+        r = await super().__call__(m, url, body)
+        if u.startswith("refs/") and r[0] == 200 and s.head != before:
+            s.prev, s.left = before, s.stale
+        return r
+
+
+def test_sync_survives_stale_ref_reads():
+    import ghtodo.sync as gs
+    real_sleep = gs.asyncio.sleep
+    async def no_wait(_): await real_sleep(0)
+    gs.asyncio.sleep = no_wait
+    try:
+        _stale_case()
+    finally:
+        gs.asyncio.sleep = real_sleep
+
+
+def _stale_case():
+    gh = StaleGH(stale_reads=3)                                      # more stale reads than the old 3 attempts could absorb
+    A = App(); sa = {"repo": "u/r", "branch": "main", "commit": None, "files": {}}
+    A.handle("POST", "/list", {"name": "L"}); lid = A.ws.order[0]
+    A.handle("POST", f"/list/{lid}/item", {"text": "one"})
+    assert run(sync(gh, A, sa)).startswith("synced")
+    A.handle("POST", f"/list/{lid}/item", {"text": "two"})            # next sync reads a stale head first
+    assert run(sync(gh, A, sa)).startswith("synced")
+    assert run(sync(gh, A, sa)) == "up to date"
+    files = gh.trees[gh.commits[gh.head]["tree"]["sha"]]
+    assert f"lists/{lid}.log" in files and "todoing.json" in files and "ghtodo.json" not in files

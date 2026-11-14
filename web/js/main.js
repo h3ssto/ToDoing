@@ -35,6 +35,9 @@ worker.onmessage = ({ data }) => { if (data.fatal) return bootFailed(data.fatal)
 const call = (op, ...args) => new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); worker.postMessage({ id, op, args }); });
 
 let wantFocus = null;
+htmx.config.allowEval = false;                                    // the CSP forbids eval: no hx-trigger filters, no js: values
+document.addEventListener("click", (e) => { if (e.target.closest?.(".name a")) e.stopImmediatePropagation(); }, true);   // a link inside a title opens the link, not the editor
+
 // ---- HTMX <-> Python bridge: requests never hit the network --------------
 document.body.addEventListener("htmx:beforeRequest", async (e) => {
   const { requestConfig: rc, target, elt } = e.detail;

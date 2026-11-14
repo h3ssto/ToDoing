@@ -4,6 +4,7 @@ http: async (method, url, body|None) -> (status:int, json|None)   (injected; pyf
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 
@@ -12,7 +13,7 @@ from .model import Workspace, gc_tombstones
 
 API = "https://api.github.com"
 REPO_NAME = "_todoing_data_"
-SYNCED = lambda p: p == "ghtodo.json" or (p.startswith("lists/") and p.endswith(".log"))
+SYNCED = lambda p: p in ("todoing.json", "ghtodo.json") or (p.startswith("lists/") and p.endswith(".log"))
 
 
 def blob_sha(text: str) -> str:
@@ -67,18 +68,21 @@ async def ensure_initialized(http, repo: str, branch: str):
     (404/409). The Contents API can create the first commit, so use it once."""
     s, _ = await http("GET", f"{API}/repos/{repo}/git/ref/heads/{branch}", None)
     if s in (404, 409):
-        text = "# ghtodo data\n\nManaged by ghtodo. `lists/*.log` are append-only compressed logs; do not edit by hand.\n"
+        text = "# ToDoing data\n\nManaged by ToDoing. `lists/*.log` are append-only compressed logs, do not edit by hand.\n"
         s, d = await http("PUT", f"{API}/repos/{repo}/contents/README.md", {
-            "message": "init ghtodo data", "content": base64.b64encode(text.encode()).decode(), "branch": branch})
+            "message": "init ToDoing data", "content": base64.b64encode(text.encode()).decode(), "branch": branch})
         if s >= 300:
             raise SyncError(f"could not initialise empty repo: {s}")
 
 
-async def sync(http, app, st: dict, retries=3) -> str:
+async def sync(http, app, st: dict, retries=5) -> str:
     """st = {"repo","branch","commit","files"} (mutated). Returns a human status line."""
     repo, branch = st["repo"], st["branch"]
     await ensure_initialized(http, repo, branch)
-    for _ in range(retries):
+    last = None
+    for attempt in range(retries):
+        if attempt:
+            await asyncio.sleep(0.4 * attempt)               # let GitHub settle before re-reading the ref
         s, ref = await http("GET", f"{API}/repos/{repo}/git/ref/heads/{branch}", None)
         if s in (401, 403):
             raise SyncError("token rejected or expired - sign in again")
@@ -109,6 +113,8 @@ async def sync(http, app, st: dict, retries=3) -> str:
                 raise SyncError(f"blob create: {s}")
             tree.append({"path": p, "mode": "100644", "type": "blob", "sha": b["sha"]})
         s, t = await http("POST", f"{API}/repos/{repo}/git/trees", {"base_tree": c["tree"]["sha"], "tree": tree})
+        if s >= 300:
+            raise SyncError(f"tree create: {s}")
         s, nc = await http("POST", f"{API}/repos/{repo}/git/commits", {
             "message": f"sync: {len(changed)} file(s)" + (f", {conflicts} conflict(s)" if conflicts else ""),
             "tree": t["sha"], "parents": [head]})
@@ -117,5 +123,5 @@ async def sync(http, app, st: dict, retries=3) -> str:
             app.ws = merged
             st.update(commit=nc["sha"], files={**remote_files, **changed})
             return f"synced {len(changed)} file(s)" + (f" · {conflicts} conflict(s) → see ⚠ Conflicts" if conflicts else "")
-        # 422 = someone pushed in between -> loop: re-fetch, re-merge
-    raise SyncError("gave up after concurrent pushes")
+        last = s                                          # 422 = someone pushed in between -> loop: re-fetch, re-merge
+    raise SyncError(f"gave up after concurrent pushes (ref update answered {last})")
