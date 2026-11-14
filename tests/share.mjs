@@ -1,0 +1,34 @@
+// Add-device flow: QR + share key from a signed-in device; joining from a link asks first and clears the secret from the URL.
+import { chromium } from "playwright-core";
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM || "/usr/bin/chromium", args: ["--no-sandbox"] });
+const ctx = await b.newContext({ viewport: { width: 1000, height: 700 }, permissions: ["clipboard-read", "clipboard-write"] });
+const p = await ctx.newPage(); const errs = []; p.on("pageerror", e => errs.push(e.message));
+let fails = 0; const ok = (c, m) => { console.log(c ? "ok  " : "FAIL", m); if (!c) fails++; };
+const API = { "/user": { login: "octo" } };
+await ctx.route("https://api.github.com/**", r => { const u = new URL(r.request().url()).pathname;
+  r.fulfill({ status: API[u] ? 200 : 404, headers: { "access-control-allow-origin": "*", "content-type": "application/json" }, body: JSON.stringify(API[u] || {}) }); });
+await p.goto("http://localhost:8000/"); await p.waitForSelector("aside");
+ok(await p.locator("#btn-share").isHidden(), "no Add device while signed out");
+await p.evaluate(() => new Promise(res => { const r = indexedDB.open("ghtodo", 1); r.onsuccess = () => { const t = r.result.transaction("kv", "readwrite").objectStore("kv");
+  t.put(JSON.stringify("github_pat_TEST123"), "token"); t.put(JSON.stringify("octo"), "login"); t.put(JSON.stringify({ repo: "octo/_todoing_data_", branch: "main", commit: null, files: {} }), "sync"); t.transaction.oncomplete = res; }; }));
+await p.reload(); await p.waitForSelector("#btn-share:not([hidden])");
+await p.click("#btn-share"); await p.waitForSelector("#share-dlg[open] #qr svg");
+const key = await p.inputValue("#share-key");
+ok(key.startsWith("todoing1.") && !key.includes("github_pat_TEST123"), "key is shown, token is not in plain text");
+ok(await p.locator("#qr svg rect, #qr svg path").count() > 0, "QR code rendered");
+await p.click("#copy-key"); ok(await p.evaluate(() => navigator.clipboard.readText()) === key, "Copy key");
+await p.click("#copy-link"); const link = await p.evaluate(() => navigator.clipboard.readText());
+ok(link.endsWith("#join=" + key) && link.startsWith("http://localhost:8000/"), "Copy link");
+await p.keyboard.press("Escape"); await p.waitForFunction(() => !document.querySelector("#share-dlg").open); await p.waitForTimeout(100); ok(await p.inputValue("#share-key") === "", "secret cleared when the dialog closes");
+// second device: fresh profile opens the link
+const ctx2 = await b.newContext({ viewport: { width: 1000, height: 700 } }); await ctx2.route("https://api.github.com/**", r => r.fulfill({ status: r.request().url().endsWith("/user") ? 200 : 404, headers: { "access-control-allow-origin": "*", "content-type": "application/json" }, body: JSON.stringify({ login: "octo" }) }));
+const q = await ctx2.newPage(); q.on("pageerror", e => errs.push(e.message));
+await q.goto(link); await q.waitForSelector("#join-dlg[open]");
+await q.waitForFunction(() => !document.querySelector("#join-ok").disabled);
+ok((await q.textContent("#join-who")).includes("octo") && !q.url().includes("join="), "asks to connect as octo; URL cleaned");
+await q.click("#join-ok"); await q.waitForSelector("#btn-share:not([hidden])");
+ok(true, "joined: this device is signed in now");
+const q3 = await ctx2.newPage(); await q3.goto("http://localhost:8000/#join=todoing1.@@@"); await q3.waitForSelector("#join-dlg[open]"); await q3.waitForFunction(() => document.querySelector("#join-who").classList.contains("bad"));
+ok(await q3.locator("#join-ok").isDisabled(), "damaged key: error shown, Connect disabled");
+ok(errs.length === 0, "no page errors " + errs.join(";"));
+await b.close(); process.exit(fails ? 1 : 0);

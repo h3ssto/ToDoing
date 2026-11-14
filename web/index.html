@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; script-src 'self' 'wasm-unsafe-eval'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; worker-src 'self'">
+  <title>ToDoing</title>
+  <link rel="stylesheet" href="vendor/fa/css/fontawesome.min.css">
+  <link rel="stylesheet" href="vendor/fa/css/solid.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <div id="boot" role="status" aria-live="polite">
+    <div class="boot-name">ToDoing</div>
+    <div class="spinner" aria-hidden="true"></div>
+    <div id="boot-msg">Waking up the snake…</div>
+    <button id="boot-retry" hidden>Reload</button>
+  </div>
+  <div id="bar">
+    <b>ToDoing</b>
+    <span id="state"></span>
+    <button id="btn-reload" hidden><i class="fa-solid fa-arrow-rotate-right"></i> Update ready</button>
+    <span class="grow"></span>
+    <button id="btn-share" hidden><i class="fa-solid fa-qrcode"></i> Add device</button>
+    <button id="btn-sync" hidden><i class="fa-solid fa-rotate"></i> Sync</button>
+    <button id="btn-login"><i class="fa-solid fa-right-to-bracket"></i> Sign in</button>
+    <button id="btn-logout" hidden><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+  </div>
+  <div id="app"></div>
+  <dialog id="login-dlg" class="dlg">
+    <form method="dialog">
+      <header class="dlg-head"><span class="dlg-ic"><i class="fa-solid fa-plug"></i></span><h3>Connect GitHub</h3></header>
+      <ol class="steps">
+        <li><span class="n">1</span><div><a class="btn" target="_blank" rel="noopener" href="https://github.com/new?name=_todoing_data_&visibility=private&description=ToDoing+data"><i class="fa-solid fa-folder-plus"></i> Create <code>_todoing_data_</code> <i class="fa-solid fa-arrow-up-right-from-square ext"></i></a></div></li>
+        <li><span class="n">2</span><div><a class="btn" target="_blank" rel="noopener" href="https://github.com/settings/personal-access-tokens/new?name=ToDoing&description=ToDoing+sync&contents=write"><i class="fa-solid fa-key"></i> Create a token <i class="fa-solid fa-arrow-up-right-from-square ext"></i></a>
+          <div class="hint"><i class="fa-solid fa-lock"></i> <code>_todoing_data_</code> only · Contents: Read and write</div></div></li>
+        <li><span class="n">3</span><div class="pat"><i class="fa-solid fa-key lead"></i><input id="pat" type="password" placeholder="Token or share key" autocomplete="off" aria-label="Token">
+          <button type="button" class="ib" id="pat-eye" aria-label="Show token" title="Show / hide"><i class="fa-solid fa-eye"></i></button></div></li>
+      </ol>
+      <footer class="dlg-foot"><button value="cancel" formnovalidate><i class="fa-solid fa-xmark"></i> Cancel</button><button value="ok" class="pri"><i class="fa-solid fa-plug"></i> Connect</button></footer>
+    </form>
+  </dialog>
+  <dialog id="share-dlg" class="dlg">
+    <form method="dialog">
+      <header class="dlg-head"><span class="dlg-ic"><i class="fa-solid fa-qrcode"></i></span><h3>Add a device</h3></header>
+      <div class="share-body">
+        <div id="qr" aria-label="QR code"></div>
+        <div class="keyrow"><input id="share-key" readonly aria-label="Share key"><button type="button" id="copy-key" class="ib" title="Copy key" aria-label="Copy key"><i class="fa-solid fa-copy"></i></button></div>
+        <button type="button" id="copy-link"><i class="fa-solid fa-link"></i> Copy link</button>
+        <div class="warn"><i class="fa-solid fa-triangle-exclamation"></i> Gives full access to your data</div>
+      </div>
+      <footer class="dlg-foot"><button value="close"><i class="fa-solid fa-xmark"></i> Close</button></footer>
+    </form>
+  </dialog>
+  <dialog id="join-dlg" class="dlg">
+    <form method="dialog">
+      <header class="dlg-head"><span class="dlg-ic"><i class="fa-solid fa-mobile-screen"></i></span><h3>Connect this device</h3></header>
+      <div class="share-body"><div id="join-who"></div></div>
+      <footer class="dlg-foot"><button value="cancel"><i class="fa-solid fa-xmark"></i> Cancel</button><button value="ok" class="pri" id="join-ok"><i class="fa-solid fa-plug"></i> Connect</button></footer>
+    </form>
+  </dialog>
+  <script src="vendor/htmx.min.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

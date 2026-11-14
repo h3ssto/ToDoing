@@ -1,0 +1,18 @@
+import { chromium } from "playwright-core";
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM || "/usr/bin/chromium", args: ["--no-sandbox"] });
+const p = await (await b.newContext({ viewport: { width: 1300, height: 800 } })).newPage();
+let fails = 0; const ok = (c, m) => { console.log(c ? "ok  " : "FAIL", m); if (!c) fails++; };
+await p.goto("http://localhost:8000/?demo"); await p.waitForSelector("li.item");
+const cols = () => p.locator(".col").count();
+ok(await cols() === 3 && await p.locator("aside .more").count() === 0, "3 lists, no 'Show hidden' yet");
+await p.locator("aside li[data-droplist]").nth(1).hover(); await p.locator("aside li[data-droplist]").nth(1).locator("button[title=Hide]").click();
+await p.waitForFunction(() => document.querySelectorAll(".col").length === 2);
+ok(/Show hidden \(1\)/.test(await p.textContent("aside .more")), "hidden list leaves view, button shows count");
+await p.click("aside .more a"); await p.waitForSelector("aside li.off");
+ok(await cols() === 2 && await p.locator("aside li.off").count() === 1, "hidden list listed in sidebar only");
+await p.click("aside li.off a"); await p.waitForSelector(".detail");
+ok(await p.locator("li.item").count() > 0, "hidden list can still be opened, data intact");
+await p.click("aside li.off button[title=Restore]", { force: true }); await p.waitForFunction(() => !document.querySelector("aside .more"));
+await p.click("aside li >> text=All lists"); await p.waitForFunction(() => document.querySelectorAll(".col").length === 3);
+ok(true, "restore brings it back");
+await b.close(); process.exit(fails ? 1 : 0);
